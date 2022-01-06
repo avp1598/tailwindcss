@@ -204,9 +204,6 @@ export default function expandTailwindAtRules(context) {
 
     if (layerNodes.base) {
       layerNodes.base.before(cloneNodes([...baseNodes, ...defaultNodes], layerNodes.base.source))
-    }
-
-    if (layerNodes.base) {
       layerNodes.base.remove()
     }
 
@@ -220,11 +217,26 @@ export default function expandTailwindAtRules(context) {
       layerNodes.utilities.remove()
     }
 
+    // We do post-filtering to not alter the emitted order of the variants
+    const variantNodes = Array.from(screenNodes).filter(node => {
+      const parentLayer = node.raws.tailwind?.parent_layer
+
+      if (parentLayer === 'components') {
+        return !!layerNodes.components
+      }
+
+      if (parentLayer === 'utilities') {
+        return !!layerNodes.utilities
+      }
+
+      return true
+    })
+
     if (layerNodes.variants) {
-      layerNodes.variants.before(cloneNodes([...screenNodes], layerNodes.variants.source))
+      layerNodes.variants.before(cloneNodes(variantNodes, layerNodes.variants.source))
       layerNodes.variants.remove()
-    } else {
-      root.append(cloneNodes([...screenNodes], root.source))
+    } else if (variantNodes.length > 0) {
+      root.append(cloneNodes(variantNodes, root.source))
     }
 
     // ---
